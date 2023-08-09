@@ -14,7 +14,7 @@ namespace OctopusSamples.ProductService
     {
         public static void Main(string[] args)
         {
-            //CreateWebHostBuilder(args).Build().Run(false);
+            //CreateWebHostBuilder(args).Build().Run(true);
             CreateWebHostBuilder(args).Build().Run();
         }
 
