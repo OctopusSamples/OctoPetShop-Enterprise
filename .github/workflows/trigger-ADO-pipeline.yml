@@ -1,8 +1,6 @@
 name: Trigger Build Pipeline
 
 on:
-  push:
-    branches: [ "maine" ]
   workflow_dispatch:
 
 jobs:
