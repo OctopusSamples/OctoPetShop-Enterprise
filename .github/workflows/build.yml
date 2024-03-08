@@ -68,7 +68,7 @@ jobs:
         with:
           package_id: PetClinic.Database
           version: "${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}"  
-          base_path: "$GITHUB_WORKSPACE/artifacts/OctopusSamples.OctoPetShop.Database"          
+          base_path: "artifacts/OctopusSamples.OctoPetShop.Database"          
           files: "**/*"
           output_folder: packaged
 
