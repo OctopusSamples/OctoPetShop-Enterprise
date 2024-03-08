@@ -1,0 +1,117 @@
+name: Build CI
+
+on:
+  push:
+    branches: 
+      - main
+      - 'feature/**'
+    paths:
+      - 'src/**'
+      - 'db/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+env:  
+  OCTOPUS_PROJECT_NAME: "Pet Clinic"
+  OCTOPUS_FEATURE_BRANCH_CHANNEL: Default  
+  OCTOPUS_RELEASE_CHANNEL: Release       
+  OCTOPUS_SPACE: Default
+  OCTOPUS_API_KEY: ${{ secrets.OCTOPUSSERVERAPIKEY }}  
+  OCTOPUS_URL: http://bobjwalker.octopus.app
+
+jobs:
+  build-and-push-application:    
+    runs-on: ubuntu-latest        
+    strategy:
+      matrix:
+        dotnet-version: ['6.0.x']
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: '0'      
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.14
+        with:
+            versionSpec: 5.x
+      - id: determine_version
+        name: Determine Version
+        uses: gittools/actions/gitversion/execute@v0.9.14
+        with:
+            additionalArguments: /overrideconfig mode=Mainline 
+      - name: update tag
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: ${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.ref == 'refs/heads/main' 
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }} 
+
+      - name: Install dependencies
+        run: dotnet restore      
+      - name: Build
+        run: dotnet build --configuration Release --no-restore      
+      - name: Create artifacts folder
+        run: |
+          mkdir "$GITHUB_WORKSPACE/artifacts"
+          mkdir "$GITHUB_WORKSPACE/artifacts/OctopusSamples.OctoPetShop.Database"   
+      - name: Publish OctoPetShopDatabase
+        run: dotnet publish src/OctopusSamples.OctoPetShop.Database/OctopusSamples.OctoPetShop.Database.csproj --configuration Release --no-restore --output "$GITHUB_WORKSPACE/artifacts/OctopusSamples.OctoPetShop.Database"       
+      - name: package database
+        id: "database_package"
+        uses: OctopusDeploy/create-zip-package-action@v3
+        with:
+          package_id: PetClinic.Database
+          version: "${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}"  
+          base_path: "$GITHUB_WORKSPACE/artifacts/OctopusSamples.OctoPetShop.Database"          
+          files: "**/*"
+          output_folder: packaged
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:             
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_PAT }}
+      - name: Build OctoPetShop web container
+        run: |
+          docker build ./src/OctopusSamples.OctoPetShop.Web --file ./src/OctopusSamples.OctoPetShop.Web/dockerfile --tag bobjwalker99/octopetshop-web:${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+          docker push bobjwalker99/octopetshop-web:${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+          
+      - name: Build OctoPetShop product service container
+        run: | 
+          docker build ./src/OctopusSamples.OctoPetShop.ProductService --file ./src/OctopusSamples.OctoPetShop.ProductService/dockerfile --tag bobjwalker99/octopetshop-productservice:${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+          docker push bobjwalker99/octopetshop-productservice:${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+          
+      - name: Build OctoPetShop shopping cart container
+        run: | 
+          docker build ./src/OctopusSamples.OctoPetShop.ShoppingCartService --file ./src/OctopusSamples.OctoPetShop.ShoppingCartService/dockerfile --tag bobjwalker99/octopetshop-shoppingcartservice:${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+          docker push bobjwalker99/octopetshop-shoppingcartservice:${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}
+
+      - name: push packages to Octopus
+        uses: OctopusDeploy/push-package-action@v3
+        with:
+          packages: |
+            packaged/**/*.zip                      
+      - name: push build information to Octopus
+        uses: OctopusDeploy/push-build-information-action@v3
+        with:
+          packages: |
+            PetClinic.Database 
+            bobjwalker99/octopetshop-web
+            bobjwalker99/octopetshop-productservice
+            bobjwalker99/octopetshop-shoppingcartservice
+          version: "${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}" 
+      - name: create release
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: ${{ env.OCTOPUS_PROJECT_NAME }}
+          channel: ${{ github.ref == 'refs/heads/main' && env.OCTOPUS_RELEASE_CHANNEL || env.OCTOPUS_FEATURE_BRANCH_CHANNEL }}
+          release_number: "${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}"
+          package_version: "${{ env.GitVersion_MajorMinorPatch }}.${{ env.GitVersion_PreReleaseNumber || env.GitVersion_PreReleaseTag || github.run_number }}${{ env.GitVersion_PreReleaseLabelWithDash }}"                           
+
+      

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octopetshop-shoppingcartservice-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: shoppingcart
+  template:
+    metadata:
+      labels:
+        component: shoppingcart
+    spec:
+      containers:
+        - name: shoppingcart                    
+          image: bobjwalker99/octopetshop-shoppingcartservice:0.0.1
+          env:
+            - name: OPSConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: pet-clinic-secrets
+                  key: databaseConnectionString
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: octopetshop-shoppingcart-cluster-ip-service
+spec:
+  type: ClusterIP
+  selector:
+    component: shoppingcartservice
+  ports:
+    - port: 5012
+      targetPort: 5012
+      name: http-port
+    - port: 5013
+      targetPort: 5013
+      name: https-port

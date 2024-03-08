@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octopetshop-productservice-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: productservice
+  template:
+    metadata:
+      labels:
+        component: productservice
+    spec:
+      containers:
+        - name: productservice
+          image: bobjwalker99/octopetshop-productservice:0.0.1                   
+          env:
+            - name: OPSConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: pet-clinic-secrets
+                  key: databaseConnectionString
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: octopetshop-productservice-cluster-ip-service
+spec:
+  type: ClusterIP
+  selector:
+    component: productservice
+  ports:
+    - port: 5011
+      targetPort: 5011
+      name: http-port
+    - port: 5014
+      targetPort: 5014
+      name: https-port           
