@@ -51,11 +51,7 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ matrix.dotnet-version }} 
-
-      - name: Install dependencies
-        run: dotnet restore      
-      - name: Build
-        run: dotnet build --configuration Release --no-restore      
+     
       - name: Create artifacts folder
         run: |
           mkdir "$GITHUB_WORKSPACE/artifacts"
