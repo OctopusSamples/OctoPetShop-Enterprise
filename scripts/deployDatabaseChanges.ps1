@@ -21,8 +21,8 @@ else
         New-Item $changeReportDirectory -ItemType "directory"
     }
 
-    dotnet $ExecutionLocation --ConnectionString="$connectionString" --PreviewReportPath "$reportpath"
+    dotnet $ExecutionLocation --ConnectionString="$connectionString" --PreviewReportPath "$changeReportDirectory"
 
-    $generatedReport = "$reportPath/UpgradeReport.html"
+    $generatedReport = "$changeReportDirectory/UpgradeReport.html"
     New-OctopusArtifact -Path "$generatedReport" -Name "$environmentName.UpgradeReport.html"
 }
