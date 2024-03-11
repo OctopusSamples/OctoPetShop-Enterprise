@@ -2,9 +2,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
-    <RepositoryUrl>https://github.com/OctopusSamples/OctoPetShop.git</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="dbup" Version="4.2.0">
@@ -17,9 +16,5 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="scripts/*.sql" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="deploy.sh" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="deploy.ps1" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
