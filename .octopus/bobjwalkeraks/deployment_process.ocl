@@ -76,7 +76,7 @@ step "generate-database-delta-report" {
                 Deploys the latest database changes to the tenanted database
                 EOT
         properties = {
-            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.GitRepository.Source = "Project"
             Octopus.Action.Script.ScriptFileName = "scripts/deployDatabaseChanges.ps1"
             Octopus.Action.Script.ScriptParameters = "-connectionString \"#{Project.Connection.String}\" -extractedPath \"#{Octopus.Action.Package[PetShop.Database].ExtractedPath}\" -environmentName \"#{Octopus.Environment.Name}\" -changeReportDirectory \"#{Project.ChangeReport.Path}\""
             Octopus.Action.Script.ScriptSource = "GitRepository"
@@ -84,13 +84,6 @@ step "generate-database-delta-report" {
         }
         tenant_tags = ["Branch Type/Pseudo"]
         worker_pool = "hosted-ubuntu"
-
-        git_dependencies {
-            default_branch = "main"
-            git_credential_id = "GitCredentials-21"
-            git_credential_type = "Library"
-            repository_uri = "https://github.com/BobJWalker/OctoPetShop-Enterprise.git"
-        }
 
         packages "PetShop.Database" {
             acquisition_location = "Server"
@@ -124,6 +117,7 @@ step "dba-review-database-changes" {
             Octopus.Action.Manual.BlockConcurrentDeployments = "False"
             Octopus.Action.Manual.Instructions = "DBA, please review the proposed database scripts.  You can find the report in the artifacts menu to the right."
             Octopus.Action.Manual.ResponsibleTeamIds = "dba"
+            Octopus.Action.RunOnServer = "false"
         }
         tenant_tags = ["Branch Type/Pseudo"]
     }
@@ -144,19 +138,13 @@ step "deploy-database-changes" {
                 Deploys the latest database changes to the tenanted database
                 EOT
         properties = {
-            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.GitRepository.Source = "Project"
             Octopus.Action.Script.ScriptFileName = "scripts/deployDatabaseChanges.ps1"
             Octopus.Action.Script.ScriptParameters = "-connectionString \"#{Project.Connection.String}\" -extractedPath \"#{Octopus.Action.Package[PetShop.Database].ExtractedPath}\" -environmentName \"#{Octopus.Environment.Name}\""
             Octopus.Action.Script.ScriptSource = "GitRepository"
             OctopusUseBundledTooling = "False"
         }
         worker_pool = "hosted-ubuntu"
-
-        git_dependencies {
-            default_branch = "main"
-            git_credential_type = "Anonymous"
-            repository_uri = "https://github.com/BobJWalker/OctoPetShop-Enterprise.git"
-        }
 
         packages "PetShop.Database" {
             acquisition_location = "Server"
@@ -185,7 +173,8 @@ step "deploy-product-service" {
                 Deploys the specified version of the product service and Cluster IP to the tenanted namespace.
                 EOT
         properties = {
-            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.GitRepository.FilePathFilters = "k8s/deployments/product-service-deployment.yaml"
+            Octopus.Action.GitRepository.Source = "Project"
             Octopus.Action.Kubernetes.DeploymentTimeout = "180"
             Octopus.Action.Kubernetes.ResourceStatusCheck = "True"
             Octopus.Action.Kubernetes.ServerSideApply.Enabled = "False"
@@ -201,13 +190,6 @@ step "deploy-product-service" {
         container {
             feed = "dockerhub"
             image = "#{Project.ExecutionContainer.K8s}"
-        }
-
-        git_dependencies {
-            default_branch = "main"
-            file_path_filters = ["k8s/deployments/product-service-deployment.yaml"]
-            git_credential_type = "Anonymous"
-            repository_uri = "https://github.com/BobJWalker/OctoPetShop-Enterprise.git"
         }
 
         packages "octopetshop-productservice" {
@@ -237,7 +219,8 @@ step "deploy-shopping-cart-service" {
                 Deploys the specified version of the shopping cart service and Cluster IP to the tenanted namespace.
                 EOT
         properties = {
-            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.GitRepository.FilePathFilters = "k8s/deployments/shopping-cart-service-deployment.yaml"
+            Octopus.Action.GitRepository.Source = "Project"
             Octopus.Action.Kubernetes.DeploymentTimeout = "180"
             Octopus.Action.Kubernetes.ResourceStatusCheck = "True"
             Octopus.Action.Kubernetes.ServerSideApply.Enabled = "False"
@@ -253,13 +236,6 @@ step "deploy-shopping-cart-service" {
         container {
             feed = "dockerhub"
             image = "#{Project.ExecutionContainer.K8s}"
-        }
-
-        git_dependencies {
-            default_branch = "main"
-            file_path_filters = ["k8s/deployments/shopping-cart-service-deployment.yaml"]
-            git_credential_type = "Anonymous"
-            repository_uri = "https://github.com/BobJWalker/OctoPetShop-Enterprise.git"
         }
 
         packages "octopetshop-shoppingcartservice" {
@@ -289,7 +265,8 @@ step "deploy-web-ui" {
                 Deploys the specified version of the Web UI, Cluster IP, and ingress configuration to the tenanted namespace.
                 EOT
         properties = {
-            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.GitRepository.FilePathFilters = "k8s/deployments/frontend-deployment.yaml"
+            Octopus.Action.GitRepository.Source = "Project"
             Octopus.Action.Kubernetes.DeploymentTimeout = "180"
             Octopus.Action.Kubernetes.ResourceStatusCheck = "True"
             Octopus.Action.Kubernetes.ServerSideApply.Enabled = "False"
@@ -305,13 +282,6 @@ step "deploy-web-ui" {
         container {
             feed = "dockerhub"
             image = "#{Project.ExecutionContainer.K8s}"
-        }
-
-        git_dependencies {
-            default_branch = "main"
-            file_path_filters = ["k8s/deployments/frontend-deployment.yaml"]
-            git_credential_type = "Anonymous"
-            repository_uri = "https://github.com/BobJWalker/OctoPetShop-Enterprise.git"
         }
 
         packages "octopetshop-web" {
