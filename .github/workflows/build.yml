@@ -45,14 +45,6 @@ jobs:
         uses: gittools/actions/gitversion/execute@v1
         with:
             additionalArguments: /config gitversion.yml 
-      - name: update tag
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: ${{ steps.determine_version.outputs.FullSemVer }}
-        env: 
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.ref == 'refs/heads/main' 
-
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v3
         with:
@@ -117,7 +109,21 @@ jobs:
         with:
           project: ${{ env.OCTOPUS_PROJECT_NAME }}
           channel: ${{ github.ref == 'refs/heads/main' && env.OCTOPUS_RELEASE_CHANNEL || env.OCTOPUS_FEATURE_BRANCH_CHANNEL }}
+          git_ref: ${{ (github.ref_type == 'tag' && github.event.repository.default_branch ) || (github.head_ref || github.ref) }}
+          git_commit: ${{ github.event.after || github.event.pull_request.head.sha }}  
           release_number: "${{ steps.determine_version.outputs.FullSemVer }}"
-          package_version: "${{ steps.determine_version.outputs.FullSemVer }}"                           
+          package_version: "${{ steps.determine_version.outputs.FullSemVer }}"
+      - name: Create Release for GitHub
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: "${{ needs.prep.outputs.sem_Ver }}"
+          release_name: Release ${{ needs.prep.outputs.sem_Ver }}
+          body: |
+            Commit Message: ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease:  ${{ github.ref == 'refs/heads/main' && 'false' || 'true' }}                           
 
       
