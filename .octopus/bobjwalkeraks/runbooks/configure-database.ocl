@@ -1,0 +1,184 @@
+name = "Configure Tenant"
+default_guided_failure_mode = "EnvironmentDefault"
+description = <<-EOT
+        **Action**: Creates the database and namespace if it doesn't exist for the environment.  
+          
+          **Affects**: The SQL Server and Kubernetes cluster this application is running on.
+        EOT
+environment_scope = "FromProjectLifecycles"
+multi_tenancy_mode = "Tenanted"
+
+connectivity_policy {
+    allow_deployments_to_no_targets = true
+}
+
+run_retention_policy {
+    quantity_to_keep = 10
+}
+
+process {
+    step "sql-create-database-if-not-exists-copy-azure" {
+        name = "Azure SQL - Create Database If Not Exists"
+
+        action {
+            notes = <<-EOT
+                    **Always Runs**
+                    
+                    Runs a script on the Azure Sql Server to ensure the database exists and is configured as a serverless general purpose database with 1 vCore.
+                    EOT
+            properties = {
+                createCommandTimeout = "600"
+                createDatabaseName = "#{Project.Database.Name}"
+                createSqlDatabaseRetryAttempts = "0"
+                createSqlLoginPasswordWhoHasRights = "#{SQLServer.User.Password}"
+                createSqlLoginUserWhoHasCreateUserRights = "#{SQLServer.User.Name}"
+                createSqlServer = "#{SQLServer.Server.Name}"
+                Octopus.Action.Template.Id = "ActionTemplates-481"
+                Octopus.Action.Template.Version = "0"
+                OctopusUseBundledTooling = "False"
+            }
+            worker_pool = "hosted-ubuntu"
+
+            container {
+                feed = "dockerhub"
+                image = "#{Project.ExecutionContainer.K8s}"
+            }
+        }
+    }
+
+    step "run-script-on-primary-database" {
+        name = "Run Script on Database"
+
+        action {
+            notes = <<-EOT
+                    **Always Runs**
+                    
+                    Runs a script on the database to ensure that it is running as the databases are configured to go to sleep after an hour of inactivity.
+                    EOT
+            properties = {
+                Adhoc.Database.Name = "#{Project.Database.Name}"
+                Adhoc.Database.Password = "#{SQLServer.User.Password}"
+                Adhoc.Database.Script = "Select 1 as Number"
+                Adhoc.Database.Server = "#{SQLServer.Server.Name}"
+                Adhoc.Database.UserName = "#{SQLServer.User.Name}"
+                Octopus.Action.AutoRetry.MaximumCount = "3"
+                Octopus.Action.ExecutionTimeout.Minutes = "10"
+                Octopus.Action.Template.Id = "ActionTemplates-383"
+                Octopus.Action.Template.Version = "0"
+                OctopusUseBundledTooling = "False"
+            }
+            worker_pool = "hosted-ubuntu"
+
+            container {
+                feed = "dockerhub"
+                image = "#{Project.ExecutionContainer.K8s}"
+            }
+        }
+    }
+
+    step "create-tenant-namespace" {
+        name = "Create Tenant Namespace"
+        properties = {
+            Octopus.Action.TargetRoles = "petclinic-tenanted"
+        }
+
+        action {
+            action_type = "Octopus.KubernetesRunScript"
+            notes = <<-EOT
+                    **Always Runs**
+                    
+                    Applies the manifest file to ensure the namespace exists for this particular tenant.
+                    EOT
+            properties = {
+                Octopus.Action.KubernetesContainers.Namespace = "default"
+                Octopus.Action.Script.ScriptBody = <<-EOT
+                    $namespace = $OctopusParameters["Project.K8s.Namespace"]
+                    
+                    kubectl create namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
+                    EOT
+                Octopus.Action.Script.ScriptSource = "Inline"
+                Octopus.Action.Script.Syntax = "PowerShell"
+                OctopusUseBundledTooling = "False"
+            }
+            worker_pool = "hosted-ubuntu"
+
+            container {
+                feed = "dockerhub"
+                image = "#{Project.ExecutionContainer.K8s}"
+            }
+        }
+    }
+
+    step "create-connection-string-secret" {
+        name = "Create Connection String Secret"
+        properties = {
+            Octopus.Action.TargetRoles = "petclinic-tenanted"
+        }
+
+        action {
+            action_type = "Octopus.KubernetesDeployRawYaml"
+            notes = <<-EOT
+                    **Always Runs**
+                    
+                    Updates the connection string secret for this particular tenanted namespace
+                    EOT
+            properties = {
+                Octopus.Action.GitRepository.Source = "External"
+                Octopus.Action.Kubernetes.DeploymentTimeout = "180"
+                Octopus.Action.Kubernetes.ResourceStatusCheck = "True"
+                Octopus.Action.Kubernetes.ServerSideApply.Enabled = "False"
+                Octopus.Action.Kubernetes.ServerSideApply.ForceConflicts = "False"
+                Octopus.Action.KubernetesContainers.CustomResourceYamlFileName = "k8s/provision/connection-secrets.yaml"
+                Octopus.Action.KubernetesContainers.Namespace = "#{Project.K8s.Namespace}"
+                Octopus.Action.Package.JsonConfigurationVariablesTargets = "**/*.{yml,yaml}"
+                Octopus.Action.Script.ScriptSource = "GitRepository"
+                OctopusUseBundledTooling = "False"
+            }
+            worker_pool = "hosted-ubuntu"
+
+            container {
+                feed = "dockerhub"
+                image = "#{Project.ExecutionContainer.K8s}"
+            }
+
+            git_dependencies {
+                default_branch = "main"
+                file_path_filters = ["k8s/provision/connection-secrets.yaml"]
+                git_credential_id = "GitCredentials-21"
+                git_credential_type = "Library"
+                repository_uri = "https://github.com/BobJWalker/OctoPetShop-Enterprise.git"
+            }
+        }
+    }
+
+    step "notify-team-of-runbook-status" {
+        condition = "Always"
+        name = "Notify Team of Runbook Status"
+
+        action {
+            notes = <<-EOT
+                    **Always Runs**
+                    
+                    Sends a slack message to the teams so they know the status of the runbook run.
+                    EOT
+            properties = {
+                Octopus.Action.Template.Id = "ActionTemplates-101"
+                Octopus.Action.Template.Version = "15"
+                OctopusUseBundledTooling = "False"
+                ssn_Channel = "trident-status"
+                ssn_Color = "#{unless Octopus.Deployment.Error}good#{else}danger#{/unless}"
+                ssn_HookUrl = "#{Notification.Slack.Webhook.Url}"
+                ssn_IconUrl = "https://octopus.com/content/resources/favicon.png"
+                ssn_Message = "#{Notification.Body.Text}"
+                ssn_Title = "#{Notification.RunbookStatus.Subject.Text}"
+                ssn_Username = "Octopus Deploy"
+            }
+            worker_pool = "hosted-ubuntu"
+
+            container {
+                feed = "dockerhub"
+                image = "#{Project.ExecutionContainer.K8s}"
+            }
+        }
+    }
+}
