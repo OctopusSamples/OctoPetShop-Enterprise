@@ -26,7 +26,7 @@ step "cac-configure-tenant" {
     action {
         properties = {
             Octopus.Action.Template.Id = "ActionTemplates-521"
-            Octopus.Action.Template.Version = "4"
+            Octopus.Action.Template.Version = "5"
             Run.Runbook.Api.Key = "#{Project.Runbook.Api.Key}"
             Run.Runbook.AutoApproveManualInterventions = "No"
             Run.Runbook.Base.Url = "#{Octopus.Web.ServerUri}"
