@@ -10,10 +10,6 @@ variable "Project.Database.Name" {
     value "#{Tenant.Common.Abbreviation | ToLower }_#{Octopus.Environment.Name | ToLower }" {}
 }
 
-variable "Project.ExecutionContainer.K8s" {
-    value "octopuslabs/k8s-workertools:1.28" {}
-}
-
 variable "Project.K8s.Namespace" {
     value "#{Tenant.Common.Abbreviation | ToLower }-#{Octopus.Environment.Name | ToLower }" {}
 }
@@ -44,4 +40,8 @@ variable "stringData:databaseConnectionString" {
     value "#{Project.Connection.String}" {
         process = ["runbook/configure-database"]
     }
+}
+
+variable "Project.ExecutionContainer.K8s" {
+    value "octopuslabs/k8s-workertools:1.29" {}
 }
