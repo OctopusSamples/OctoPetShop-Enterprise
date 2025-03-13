@@ -56,7 +56,6 @@ step "configure-tenant" {
     }
 
     action {
-        is_disabled = true
         notes = <<-EOT
                 **Runs on Deployments Only**
                 
