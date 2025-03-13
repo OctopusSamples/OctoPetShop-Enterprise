@@ -9,7 +9,7 @@ step "calculate-deployment-mode-demo" {
                 EOT
         properties = {
             Octopus.Action.Template.Id = "ActionTemplates-441"
-            Octopus.Action.Template.Version = "5"
+            Octopus.Action.Template.Version = "8"
         }
         worker_pool = "hosted-ubuntu"
 
