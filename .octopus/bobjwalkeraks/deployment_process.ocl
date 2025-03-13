@@ -12,11 +12,6 @@ step "calculate-deployment-mode-demo" {
             Octopus.Action.Template.Version = "8"
         }
         worker_pool = "hosted-ubuntu"
-
-        container {
-            feed = "dockerhub"
-            image = "#{Project.ExecutionContainer.K8s}"
-        }
     }
 }
 
@@ -49,11 +44,6 @@ step "configure-tenant" {
             Run.Runbook.Waitforfinish = "True"
         }
         worker_pool = "hosted-ubuntu"
-
-        container {
-            feed = "dockerhub"
-            image = "#{Project.ExecutionContainer.K8s}"
-        }
     }
 }
 
