@@ -56,7 +56,7 @@ try
                 WebAppName = $"ops-{webApp}-{environmentLabel}"
             };
 
-            webAppResource.Name = $"OctoPetShop {webAppName}-{environmentName}";
+            webAppResource.Name = $"OctoPetShop {webAppName} - {environmentName}";
             webAppResource.AddOrUpdateEnvironments(environment);
             webAppResource.AddOrUpdateRoles(webAppRole);
 
