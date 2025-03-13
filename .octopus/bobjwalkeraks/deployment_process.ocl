@@ -21,15 +21,11 @@ step "calculate-deployment-mode-demo" {
 }
 
 step "configure-tenant" {
-    condition = "Variable"
     name = "Configure Tenant"
-    properties = {
-        Octopus.Step.ConditionVariableExpression = "#{unless Octopus.Deployment.Error}#{Octopus.Action[Calculate Deployment Mode].Output.RunOnDeploy}#{/unless}"
-    }
 
     action {
         notes = <<-EOT
-                **Runs on Deployments Only**
+                **Always Runs**
                 
                 Runs a runbook to verify the database and namespace for the tenant exists.  If it doesn't exist, it will create it automatically.
                 EOT
