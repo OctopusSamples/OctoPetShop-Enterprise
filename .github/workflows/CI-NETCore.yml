@@ -111,7 +111,7 @@ jobs:
             OctoPetShop.ShoppingCartService
     
   Create-Octopus-Release:
-  
+      if: false
       name: Create Octopus Release 🐙
       needs: [build, Push-build-information]
       runs-on: ubuntu-latest
