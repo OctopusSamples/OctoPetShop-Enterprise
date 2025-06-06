@@ -35,7 +35,7 @@ namespace OctopusSamples.OctoPetShop
 
             services.AddMvcCore(options =>
             {
-                //options.RequireHttpsPermanent = false; //does not affect API requests
+                //options.RequireHttpsPermanent = true; //does not affect API requests
                 options.RequireHttpsPermanent = true; //does not affect API requests
                 options.RespectBrowserAcceptHeader = true; //false by default
             })
