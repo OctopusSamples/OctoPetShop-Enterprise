@@ -89,6 +89,6 @@ jobs:
       - uses: OctopusDeploy/create-release-action@v3
         id: "create-release"
         with:
-          project: "OctoPetShop"
+          project: "OPS - Orchestrator"
       outputs: 
        release_number: ${{ steps.create-release.outputs.release_number }}
