@@ -33,7 +33,7 @@ jobs:
      - name: Build OctoPetShop web container
        run: |
         docker build ./OctopusSamples.OctoPetShop.Web --file ./OctopusSamples.OctoPetShop.Web/dockerfile --tag octopussamples/octopetshop-web-enterprise:${{ steps.version-generator.outputs.version }}
-      #  docker push octopussamples/octopetshop-web-enterprise:${{ steps.version-generator.outputs.version }}
+        docker push octopussamples/octopetshop-web-enterprise:${{ steps.version-generator.outputs.version }}
         
      - name: Build OctoPetShop product service container
        run: | 
